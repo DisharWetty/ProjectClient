@@ -1,32 +1,45 @@
 package com.example.projectclient;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
 
+import android.Manifest;
+import android.app.ProgressDialog;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.net.Uri;
-import android.os.AsyncTask;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.view.View;
+import android.webkit.MimeTypeMap;
 import android.widget.Button;
 import android.widget.TextView;
-import android.widget.Toast;
 
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.DataOutputStream;
-import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
-import java.net.HttpURLConnection;
-import java.net.URL;
+import java.io.File;
+import java.io.IOException;
+
+import okhttp3.MediaType;
+import okhttp3.MultipartBody;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.RequestBody;
+import okhttp3.Response;
+
 
 public class UploadingActivity extends AppCompatActivity  implements View.OnClickListener{
+
+    String SERVER_URL = "https://192.168.0.6:8080/files/upload";
 
     Button btn_chooseFile;
     Button btn_uploadFile;
     TextView txt_filePath;
 
+    File file = null;
     String filePath = null;
+
+    ProgressDialog progress;
 
     private static  final int CHOOSE_FILE_REQUESTCODE = 1;
 
@@ -41,6 +54,25 @@ public class UploadingActivity extends AppCompatActivity  implements View.OnClic
 
         btn_chooseFile.setOnClickListener(this);
         btn_uploadFile.setOnClickListener(this);
+
+        if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.M){
+            if(ActivityCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED){
+                requestPermissions(new String[]{Manifest.permission.READ_EXTERNAL_STORAGE},100);
+                return;
+            }
+        }
+
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        if(requestCode == 100 && (grantResults[0] == PackageManager.PERMISSION_GRANTED)){
+            //
+        }else {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                requestPermissions(new String[]{Manifest.permission.READ_EXTERNAL_STORAGE},100);
+            }
+        }
     }
 
     @Override
@@ -56,13 +88,53 @@ public class UploadingActivity extends AppCompatActivity  implements View.OnClic
 
                 break;
             case (R.id.btn_uploadFile):
-                // TODO: Upload file!
-
-                //HttpPost httppost = new HttpPost("http://192.168.0.6/files");
 
                 if (filePath != null) {
-                    SendRequest sendRequest = new SendRequest();
-                    sendRequest.execute("https://192.168.0.6/files", "file", filePath);
+//                progress = new ProgressDialog(UploadingActivity.this);
+//                progress.setTitle("Uploading");
+//                progress.setMessage("Please wait...");
+//                progress.show();
+                //
+
+                    Thread t = new Thread(new Runnable() {
+                        @Override
+                        public void run() {
+
+                            String content_type  = getMimeType(filePath);
+
+                            String file_path = file.getAbsolutePath();
+                            OkHttpClient client = new OkHttpClient();
+                            RequestBody file_body = RequestBody.create(MediaType.parse(content_type),file);
+
+                            RequestBody request_body = new MultipartBody.Builder()
+                                    .setType(MultipartBody.FORM)
+                                    .addFormDataPart("type",content_type)
+                                    .addFormDataPart("file",file_path.substring(file_path.lastIndexOf("/")+1), file_body)
+                                    .build();
+
+                            Request request = new Request.Builder()
+                                    .url(SERVER_URL)
+                                    .post(request_body)
+                                    .build();
+
+                            try {
+                                Response response = client.newCall(request).execute();
+
+                                if(!response.isSuccessful()){
+                                    throw new IOException("Error : "+response);
+                                }
+
+                                //progress.dismiss();
+
+                            } catch (IOException e) {
+                                e.printStackTrace();
+                            }
+                        }
+                    });
+
+                    t.start();
+
+                //
                 }
 
                 break;
@@ -76,6 +148,9 @@ public class UploadingActivity extends AppCompatActivity  implements View.OnClic
     public void onActivityResult(int requestCode, int resultCode, Intent data){
         if(requestCode==CHOOSE_FILE_REQUESTCODE){
             if(resultCode==RESULT_OK){
+
+                file = new File(data.getDataString());
+
                 filePath = data.getDataString();
                 txt_filePath.setText(filePath);
             }
@@ -88,50 +163,11 @@ public class UploadingActivity extends AppCompatActivity  implements View.OnClic
         }
     }
 
+    private String getMimeType(String path) {
 
+        String extension = MimeTypeMap.getFileExtensionFromUrl(path);
 
-        private class SendRequest extends AsyncTask<String, Void, String>
-    {
-        @Override
-        protected String doInBackground(String[] params) {
-            String responseFromServer = null;
-            try
-            {
-                String url = params[0];
-                URL obj = new URL(url);
-                HttpURLConnection con = (HttpURLConnection) obj.openConnection();
-                con.setRequestMethod("POST");
-                con.setRequestProperty("Accept-Language", "en-US,en,q=0.5");
-                String urlParameters = params[1] + "=" + params[2];
-                DataOutputStream wr = new DataOutputStream(con.getOutputStream());
-                BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(wr, "UTF-8"));
-                writer.write(urlParameters);
-                writer.close();
-                wr.close();
-
-                // getting information from response stream
-                int responseCode = con.getResponseCode();
-                BufferedReader reader = new BufferedReader(new InputStreamReader(con.getInputStream()));
-                String inputLine;
-                StringBuffer response = new StringBuffer();
-                while ((inputLine = reader.readLine()) != null)
-                {
-                    response.append(inputLine);
-                }
-                reader.close();
-                responseFromServer = response.toString();
-            }
-            catch (Exception ex)
-            {
-                return ex.getMessage();
-            }
-            return responseFromServer;
-        }
-
-        @Override
-        protected void onPostExecute(String message)
-        {
-            Toast.makeText(UploadingActivity.this, message, Toast.LENGTH_LONG).show();
-        }
+        return MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension);
     }
+
 }
