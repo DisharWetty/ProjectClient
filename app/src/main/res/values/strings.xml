@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="uploading">Uploading</string>
+    <string name="downloading">Downloading</string>
+    <string name="deleting">Deleting</string>
+    <string name="app_name">Client</string>
+    <string name="hello">Hello</string>
+    <string name="choose_a_file">Choose a file</string>
+    <string name="upload">Upload</string>
+</resources>
