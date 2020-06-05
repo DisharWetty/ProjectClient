@@ -7,4 +7,5 @@
     <string name="hello">Hello</string>
     <string name="choose_a_file">Choose a file</string>
     <string name="upload">Upload</string>
+    <string name="download">Download</string>
 </resources>

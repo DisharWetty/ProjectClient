@@ -97,49 +97,49 @@ public class UploadingActivity extends AppCompatActivity  implements View.OnClic
                 //
 
                     Thread t = new Thread(new Runnable() {
-                        @Override
-                        public void run() {
+                @Override
+                public void run() {
 
-                            String content_type  = getMimeType(filePath);
+                    String content_type  = getMimeType(filePath);
 
-                            String file_path = file.getAbsolutePath();
-                            OkHttpClient client = new OkHttpClient();
-                            RequestBody file_body = RequestBody.create(MediaType.parse(content_type),file);
+                    String file_path = file.getAbsolutePath();
+                    OkHttpClient client = new OkHttpClient();
+                    RequestBody file_body = RequestBody.create(MediaType.parse(content_type),file);
 
-                            RequestBody request_body = new MultipartBody.Builder()
-                                    .setType(MultipartBody.FORM)
-                                    .addFormDataPart("type",content_type)
-                                    .addFormDataPart("file",file_path.substring(file_path.lastIndexOf("/")+1), file_body)
-                                    .build();
+                    RequestBody request_body = new MultipartBody.Builder()
+                            .setType(MultipartBody.FORM)
+                            .addFormDataPart("type",content_type)
+                            .addFormDataPart("file",file_path.substring(file_path.lastIndexOf("/")+1), file_body)
+                            .build();
 
-                            Request request = new Request.Builder()
-                                    .url(SERVER_URL)
-                                    .post(request_body)
-                                    .build();
+                    Request request = new Request.Builder()
+                            .url(SERVER_URL)
+                            .post(request_body)
+                            .build();
 
-                            try {
-                                Response response = client.newCall(request).execute();
+                    try {
+                        Response response = client.newCall(request).execute();
 
-                                if(!response.isSuccessful()){
-                                    throw new IOException("Error : "+response);
-                                }
-
-                                //progress.dismiss();
-
-                            } catch (IOException e) {
-                                e.printStackTrace();
-                            }
+                        if(!response.isSuccessful()){
+                            throw new IOException("Error : "+response);
                         }
-                    });
 
-                    t.start();
+//                                progress.dismiss();
 
-                //
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
                 }
+            });
 
-                break;
-            default:
-                break;
+            t.start();
+
+            //
+        }
+
+        break;
+        default:
+        break;
         }
 
     }
